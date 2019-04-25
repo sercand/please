@@ -128,35 +128,35 @@ func MonitorState(state *core.BuildState, numThreads int, plainOutput, keepGoing
 
 // PrintConnectionMessage prints the message when we're initially connected to a remote server.
 func PrintConnectionMessage(url string, targets []core.BuildLabel, tests, coverage bool) {
-	printf("${WHITE}Connection established to remote plz server at ${BOLD_WHITE}%s${RESET}.\n", url)
-	printf("${WHITE}It's building the following %s: ", pluralise(len(targets), "target", "targets"))
+	printf("\x1b[37mConnection established to remote plz server at \x1b[37;1m%s\x1b[0m.\n", url)
+	printf("\x1b[37mIt's building the following %s: ", pluralise(len(targets), "target", "targets"))
 	for i, t := range targets {
 		if i > 5 {
-			printf("${BOLD_WHITE}...${RESET}")
+			printf("\x1b[37;1m...\x1b[0m")
 			break
 		} else {
 			if i > 0 {
 				printf(", ")
 			}
-			printf("${BOLD_WHITE}%s${RESET}", t)
+			printf("\x1b[37;1m%s\x1b[0m", t)
 		}
 	}
-	printf("\n${WHITE}Running tests: ${BOLD_WHITE}%s${RESET}\n", yesNo(tests))
-	printf("${WHITE}Coverage: ${BOLD_WHITE}%s${RESET}\n", yesNo(coverage))
-	printf("${BOLD_WHITE}Ctrl+C${RESET}${WHITE} to disconnect from it; that will ${BOLD_WHITE}not${RESET}${WHITE} stop the remote build.${RESET}\n")
+	printf("\n\x1b[37mRunning tests: \x1b[37;1m%s\x1b[0m\n", yesNo(tests))
+	printf("\x1b[37mCoverage: \x1b[37;1m%s\x1b[0m\n", yesNo(coverage))
+	printf("\x1b[37;1mCtrl+C\x1b[0m\x1b[37m to disconnect from it; that will \x1b[37;1mnot\x1b[0m\x1b[37m stop the remote build.\x1b[0m\n")
 }
 
 // PrintDisconnectionMessage prints the message when we're disconnected from the remote server.
 func PrintDisconnectionMessage(success, closed, disconnected bool) {
-	printf("${BOLD_WHITE}Disconnected from remote plz server.\nStatus: ")
+	printf("\x1b[37;1mDisconnected from remote plz server.\nStatus: ")
 	if disconnected {
-		printf("${BOLD_YELLOW}Disconnected${RESET}\n")
+		printf("\x1b[33;1mDisconnected\x1b[0m\n")
 	} else if !closed {
-		printf("${BOLD_MAGENTA}Unknown${RESET}\n")
+		printf("\x1b[35;1mUnknown\x1b[0m\n")
 	} else if success {
-		printf("${BOLD_GREEN}Success${RESET}\n")
+		printf("\x1b[32;1mSuccess\x1b[0m\n")
 	} else {
-		printf("${BOLD_RED}Failure${RESET}\n")
+		printf("\x1b[31;1mFailure\x1b[0m\n")
 	}
 }
 
@@ -188,7 +188,7 @@ func processResult(state *core.BuildState, result *core.BuildResult, buildingTar
 		// Don't stop here after test failure, aggregate them for later.
 		if !keepGoing && result.Status != core.TargetTestFailed {
 			// Reset colour so the entire compiler error output doesn't appear red.
-			log.Errorf("%s failed:${RESET}\n%s", result.Label, shortError(result.Err))
+			log.Errorf("%s failed:\x1b[0m\n%s", result.Label, shortError(result.Err))
 			state.KillAll()
 		} else if !plainOutput { // plain output will have already logged this
 			log.Errorf("%s failed: %s", result.Label, shortError(result.Err))
@@ -221,7 +221,7 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 			if target.Results.Failures() == 0 && target.Results.Errors() == 0 {
 				if target.Results.TimedOut {
 				} else {
-					printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${WHITE_ON_RED}Failed to run test${RESET}\n", target.Label)
+					printf("\x1b[37;41;1mFail:\x1b[31;49;1m %s \x1b[37;41;1mFailed to run test\x1b[0m\n", target.Label)
 					target.Results.TestCases = append(target.Results.TestCases, core.TestCase{
 						Executions: []core.TestExecution{
 							{
@@ -234,7 +234,7 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 					})
 				}
 			} else {
-				printf("${WHITE_ON_RED}Fail:${RED_NO_BG} %s ${BOLD_GREEN}%3d passed ${BOLD_YELLOW}%3d skipped ${BOLD_RED}%3d failed ${BOLD_CYAN}%3d errored${RESET} Took ${BOLD_WHITE}%s${RESET}\n",
+				printf("\x1b[37;41;1mFail:\x1b[31;49;1m %s \x1b[32;1m%3d passed \x1b[33;1m%3d skipped \x1b[31;1m%3d failed \x1b[36;1m%3d errored\x1b[0m Took \x1b[37;1m%s\x1b[0m\n",
 					target.Label, target.Results.Passes(), target.Results.Skips(), target.Results.Failures(), target.Results.Errors(), target.Results.Duration.Round(durationGranularity))
 				for _, failingTestCase := range target.Results.TestCases {
 					if failingTestCase.Success() != nil {
@@ -245,11 +245,11 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 					if failures := failingTestCase.Failures(); len(failures) > 0 {
 						execution = failures[0]
 						failure = execution.Failure
-						printf("${BOLD_RED}Failure${RESET}: ${RED}%s${RESET} in %s\n", failure.Type, failingTestCase.Name)
+						printf("\x1b[31;1mFailure\x1b[0m: \x1b[31m%s\x1b[0m in %s\n", failure.Type, failingTestCase.Name)
 					} else if errors := failingTestCase.Errors(); len(errors) > 0 {
 						execution = errors[0]
 						failure = execution.Error
-						printf("${BOLD_CYAN}Error${RESET}: ${CYAN}%s${RESET} in %s\n", failure.Type, failingTestCase.Name)
+						printf("\x1b[36;1mError\x1b[0m: \x1b[36m%s\x1b[0m in %s\n", failure.Type, failingTestCase.Name)
 					}
 					if failure != nil {
 						if failure.Message != "" {
@@ -257,10 +257,10 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 						}
 						printf("%s\n", failure.Traceback)
 						if len(execution.Stdout) > 0 {
-							printf("${BOLD_RED}Standard output${RESET}:\n%s\n", execution.Stdout)
+							printf("\x1b[31;1mStandard output\x1b[0m:\n%s\n", execution.Stdout)
 						}
 						if len(execution.Stderr) > 0 {
-							printf("${BOLD_RED}Standard error${RESET}:\n%s\n", execution.Stderr)
+							printf("\x1b[31;1mStandard error\x1b[0m:\n%s\n", execution.Stderr)
 						}
 					}
 				}
@@ -275,12 +275,12 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 			aggregate.TestCases = append(aggregate.TestCases, target.Results.TestCases...)
 			if len(target.Results.TestCases) > 0 {
 				if target.Results.Errors() > 0 {
-					printf("${CYAN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
+					printf("\x1b[36m%s\x1b[0m %s\n", target.Label, testResultMessage(target.Results))
 				} else if target.Results.Failures() > 0 {
-					printf("${RED}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
+					printf("\x1b[31m%s\x1b[0m %s\n", target.Label, testResultMessage(target.Results))
 				} else if detailed || len(failedTargets) == 0 {
 					// Succeeded or skipped
-					printf("${GREEN}%s${RESET} %s\n", target.Label, testResultMessage(target.Results))
+					printf("\x1b[32m%s\x1b[0m %s\n", target.Label, testResultMessage(target.Results))
 				}
 				if state.ShowTestOutput || detailed {
 					// Determine max width of test name so we align them
@@ -309,12 +309,12 @@ func printTestResults(state *core.BuildState, failedTargets []core.BuildLabel, d
 				}
 				targets++
 			} else if target.Results.TimedOut {
-				printf("${RED}%s${RESET} ${WHITE_ON_RED}Timed out${RESET}\n", target.Label)
+				printf("\x1b[31m%s\x1b[0m \x1b[37;41;1mTimed out\x1b[0m\n", target.Label)
 				targets++
 			}
 		}
 	}
-	printf(fmt.Sprintf("${BOLD_WHITE}%s and %s${BOLD_WHITE}. Total time %s.${RESET}\n",
+	printf(fmt.Sprintf("\x1b[37;1m%s and %s\x1b[37;1m. Total time %s.\x1b[0m\n",
 		pluralise(targets, "test target", "test targets"), testResultMessage(aggregate), duration))
 }
 
@@ -334,7 +334,7 @@ func formatTestCase(result core.TestCase, name string) string {
 	}
 	var outcome core.TestExecution
 	if len(result.Executions) > 1 && result.Success() != nil {
-		return fmt.Sprintf("%s ${BOLD_MAGENTA}%s${RESET}", formatTestName(result, name), "FLAKY PASS")
+		return fmt.Sprintf("%s \x1b[35;1m%s\x1b[0m", formatTestName(result, name), "FLAKY PASS")
 	}
 
 	if result.Success() != nil {
@@ -351,39 +351,39 @@ func formatTestCase(result core.TestCase, name string) string {
 
 func formatTestName(testCase core.TestCase, name string) string {
 	if testCase.Success() != nil {
-		return fmt.Sprintf("${GREEN}%s${RESET}", name)
+		return fmt.Sprintf("\x1b[32m%s\x1b[0m", name)
 	}
 	if testCase.Skip() != nil {
-		return fmt.Sprintf("${YELLOW}%s${RESET}", name)
+		return fmt.Sprintf("\x1b[33m%s\x1b[0m", name)
 	}
 	if len(testCase.Errors()) > 0 {
-		return fmt.Sprintf("${CYAN}%s${RESET}", name)
+		return fmt.Sprintf("\x1b[36m%s\x1b[0m", name)
 	}
 	if len(testCase.Failures()) > 0 {
-		return fmt.Sprintf("${RED}%s${RESET}", name)
+		return fmt.Sprintf("\x1b[31m%s\x1b[0m", name)
 	}
 	return testCase.Name
 }
 
 func formatTestExecution(execution core.TestExecution) string {
 	if execution.Error != nil {
-		return "${BOLD_CYAN}ERROR${RESET}"
+		return "\x1b[36;1mERROR\x1b[0m"
 	}
 	if execution.Failure != nil {
-		return fmt.Sprintf("${BOLD_RED}FAIL${RESET} %s", maybeToString(execution.Duration))
+		return fmt.Sprintf("\x1b[31;1mFAIL\x1b[0m %s", maybeToString(execution.Duration))
 	}
 	if execution.Skip != nil {
 		// Not usually interesting to have a duration when we did no work.
-		return "${BOLD_YELLOW}SKIP${RESET}"
+		return "\x1b[33;1mSKIP\x1b[0m"
 	}
-	return fmt.Sprintf("${BOLD_GREEN}PASS${RESET} %s", maybeToString(execution.Duration))
+	return fmt.Sprintf("\x1b[32;1mPASS\x1b[0m %s", maybeToString(execution.Duration))
 }
 
 func maybeToString(duration *time.Duration) string {
 	if duration == nil {
 		return ""
 	}
-	return fmt.Sprintf(" ${BOLD_WHITE}%s${RESET}", duration.Round(testDurationGranularity))
+	return fmt.Sprintf(" \x1b[37;1m%s\x1b[0m", duration.Round(testDurationGranularity))
 }
 
 // logProgress continually logs progress messages every 10s explaining where we're up to.
@@ -411,26 +411,26 @@ func logProgress(state *core.BuildState, buildingTargets *[]buildingTarget, stop
 func testResultMessage(results core.TestSuite) string {
 	msg := fmt.Sprintf("%s run", pluralise(results.Tests(), "test", "tests"))
 	if results.Duration >= 0.0 {
-		msg += fmt.Sprintf(" in ${BOLD_WHITE}%s${RESET}", results.Duration.Round(testDurationGranularity))
+		msg += fmt.Sprintf(" in \x1b[37;1m%s\x1b[0m", results.Duration.Round(testDurationGranularity))
 	}
-	msg += fmt.Sprintf("; ${BOLD_GREEN}%d passed${RESET}", results.Passes())
+	msg += fmt.Sprintf("; \x1b[32;1m%d passed\x1b[0m", results.Passes())
 	if results.Errors() > 0 {
-		msg += fmt.Sprintf(", ${BOLD_CYAN}%d errored${RESET}", results.Errors())
+		msg += fmt.Sprintf(", \x1b[36;1m%d errored\x1b[0m", results.Errors())
 	}
 	if results.Failures() > 0 {
-		msg += fmt.Sprintf(", ${BOLD_RED}%d failed${RESET}", results.Failures())
+		msg += fmt.Sprintf(", \x1b[31;1m%d failed\x1b[0m", results.Failures())
 	}
 	if results.Skips() > 0 {
-		msg += fmt.Sprintf(", ${BOLD_YELLOW}%d skipped${RESET}", results.Skips())
+		msg += fmt.Sprintf(", \x1b[33;1m%d skipped\x1b[0m", results.Skips())
 	}
 	if results.FlakyPasses() > 0 {
-		msg += fmt.Sprintf(", ${BOLD_MAGENTA}%s${RESET}", pluralise(results.FlakyPasses(), "flake", "flakes"))
+		msg += fmt.Sprintf(", \x1b[35;1m%s\x1b[0m", pluralise(results.FlakyPasses(), "flake", "flakes"))
 	}
 	if results.TimedOut {
-		msg += ", ${RED_ON_WHITE}TIMED OUT${RESET}"
+		msg += ", ${RED_ON_WHITE}TIMED OUT\x1b[0m"
 	}
 	if results.Cached {
-		msg += " ${GREEN}[cached]${RESET}"
+		msg += " \x1b[32m[cached]\x1b[0m"
 	}
 	return msg
 }
@@ -525,17 +525,17 @@ func buildResult(target *core.BuildTarget) []string {
 }
 
 func printFailedBuildResults(failedTargets []core.BuildLabel, failedTargetMap map[core.BuildLabel]error, duration time.Duration) {
-	printf("${WHITE_ON_RED}Build stopped after %s. %s failed:${RESET}\n", duration, pluralise(len(failedTargetMap), "target", "targets"))
+	printf("\x1b[37;41;1mBuild stopped after %s. %s failed:\x1b[0m\n", duration, pluralise(len(failedTargetMap), "target", "targets"))
 	for _, label := range failedTargets {
 		err := failedTargetMap[label]
 		if err != nil {
 			if cli.StdErrIsATerminal {
-				printf("    ${BOLD_RED}%s\n${RESET}%s${RESET}\n", label, colouriseError(err))
+				printf("    \x1b[31;1m%s\n\x1b[0m%s\x1b[0m\n", label, colouriseError(err))
 			} else {
 				printf("    %s\n%s\n", label, err)
 			}
 		} else {
-			printf("    ${BOLD_RED}%s${RESET}\n", label)
+			printf("    \x1b[31;1m%s\x1b[0m\n", label)
 		}
 	}
 }
@@ -576,9 +576,9 @@ func updateTarget2(target *buildingTarget, label core.BuildLabel, active bool, f
 
 func targetColour(target *core.BuildTarget) string {
 	if target == nil {
-		return "${BOLD_CYAN}" // unknown
+		return "\x1b[36;1m" // unknown
 	} else if target.IsBinary {
-		return "${BOLD}" + targetColour2(target)
+		return "\x1b[1m" + targetColour2(target)
 	} else {
 		return targetColour2(target)
 	}
@@ -588,19 +588,19 @@ func targetColour2(target *core.BuildTarget) string {
 	// Quick heuristic on language types. May want to make this configurable.
 	for _, require := range target.Requires {
 		if require == "py" {
-			return "${GREEN}"
+			return "\x1b[32m"
 		} else if require == "java" {
-			return "${RED}"
+			return "\x1b[31m"
 		} else if require == "go" {
-			return "${YELLOW}"
+			return "\x1b[33m"
 		} else if require == "js" {
-			return "${BLUE}"
+			return "\x1b[34m"
 		}
 	}
 	if strings.Contains(target.Label.PackageName, "third_party") {
-		return "${MAGENTA}"
+		return "\x1b[35m"
 	}
-	return "${WHITE}"
+	return "\x1b[37m"
 }
 
 // Since this is a gentleman's build tool, we'll make an effort to get plurals correct
@@ -615,7 +615,7 @@ func pluralise(num int, singular, plural string) string {
 // PrintCoverage writes out coverage metrics after a test run in a file tree setup.
 // Only files that were covered by tests and not excluded are shown.
 func PrintCoverage(state *core.BuildState, includeFiles []string) {
-	printf("${BOLD_WHITE}Coverage results:${RESET}\n")
+	printf("\x1b[37;1mCoverage results:\x1b[0m\n")
 	totalCovered := 0
 	totalTotal := 0
 	lastDir := "_"
@@ -626,9 +626,9 @@ func PrintCoverage(state *core.BuildState, includeFiles []string) {
 		dir := filepath.Dir(file)
 		if dir != lastDir {
 			if dir == "." {
-				printf("${WHITE}top-level:${RESET}\n")
+				printf("\x1b[37mtop-level:\x1b[0m\n")
 			} else {
-				printf("${WHITE}%s:${RESET}\n", strings.TrimRight(dir, "/"))
+				printf("\x1b[37m%s:\x1b[0m\n", strings.TrimRight(dir, "/"))
 			}
 		}
 		lastDir = dir
@@ -637,34 +637,34 @@ func PrintCoverage(state *core.BuildState, includeFiles []string) {
 		totalCovered += covered
 		totalTotal += total
 	}
-	printf("${BOLD_WHITE}Total coverage: %s${RESET}\n", coveragePercentage(totalCovered, totalTotal, ""))
+	printf("\x1b[37;1mTotal coverage: %s\x1b[0m\n", coveragePercentage(totalCovered, totalTotal, ""))
 }
 
 // PrintIncrementalCoverage prints the given incremental coverage statistics.
 func PrintIncrementalCoverage(stats *test.IncrementalStats) {
-	printf("${BOLD_WHITE}Incremental coverage: %s${RESET}\n", coveragePercentage(stats.CoveredLines, stats.ModifiedLines, ""))
+	printf("\x1b[37;1mIncremental coverage: %s\x1b[0m\n", coveragePercentage(stats.CoveredLines, stats.ModifiedLines, ""))
 }
 
 // PrintLineCoverageReport writes out line-by-line coverage metrics after a test run.
 func PrintLineCoverageReport(state *core.BuildState, includeFiles []string) {
 	coverageColours := map[core.LineCoverage]string{
-		core.NotExecutable: "${GREY}",
-		core.Unreachable:   "${YELLOW}",
-		core.Uncovered:     "${RED}",
-		core.Covered:       "${GREEN}",
+		core.NotExecutable: "\x1b[30m",
+		core.Unreachable:   "\x1b[33m",
+		core.Uncovered:     "\x1b[31m",
+		core.Covered:       "\x1b[32m",
 	}
 
-	printf("${BOLD_WHITE}Covered files:${RESET}\n")
+	printf("\x1b[37;1mCovered files:\x1b[0m\n")
 	for _, file := range state.Coverage.OrderedFiles() {
 		if !shouldInclude(file, includeFiles) {
 			continue
 		}
 		coverage := state.Coverage.Files[file]
 		covered, total := test.CountCoverage(coverage)
-		printf("${BOLD_WHITE}%s: %s${RESET}\n", file, coveragePercentage(covered, total, ""))
+		printf("\x1b[37;1m%s: %s\x1b[0m\n", file, coveragePercentage(covered, total, ""))
 		f, err := os.Open(file)
 		if err != nil {
-			printf("${BOLD_RED}Can't open: %s${RESET}\n", err)
+			printf("\x1b[31;1mCan't open: %s\x1b[0m\n", err)
 			continue
 		}
 		defer f.Close()
@@ -672,14 +672,14 @@ func PrintLineCoverageReport(state *core.BuildState, includeFiles []string) {
 		i := 0
 		for scanner.Scan() {
 			if i < len(coverage) {
-				printf("${WHITE}%4d %s%s\n", i, coverageColours[coverage[i]], scanner.Text())
+				printf("\x1b[37m%4d %s%s\n", i, coverageColours[coverage[i]], scanner.Text())
 			} else {
 				// Assume the lines are not executable. This happens for python, for example.
-				printf("${WHITE}%4d ${GREY}%s\n", i, scanner.Text())
+				printf("\x1b[37m%4d \x1b[30m%s\n", i, scanner.Text())
 			}
 			i++
 		}
-		printf("${RESET}\n")
+		printf("\x1b[0m\n")
 	}
 }
 
@@ -700,21 +700,21 @@ func shouldInclude(file string, files []string) bool {
 func coverageColour(percentage float32) string {
 	// TODO(pebers): consider making these configurable?
 	if percentage < 20.0 {
-		return "${MAGENTA}"
+		return "\x1b[35m"
 	} else if percentage < 60.0 {
-		return "${BOLD_RED}"
+		return "\x1b[31;1m"
 	} else if percentage < 80.0 {
-		return "${BOLD_YELLOW}"
+		return "\x1b[33;1m"
 	}
-	return "${BOLD_GREEN}"
+	return "\x1b[32;1m"
 }
 
 func coveragePercentage(covered, total int, label string) string {
 	if total == 0 {
-		return fmt.Sprintf("${BOLD_MAGENTA}%s No data${RESET}", label)
+		return fmt.Sprintf("\x1b[35;1m%s No data\x1b[0m", label)
 	}
 	percentage := 100.0 * float32(covered) / float32(total)
-	return fmt.Sprintf("%s%s %d/%s, %2.1f%%${RESET}", coverageColour(percentage), label, covered, pluralise(total, "line", "lines"), percentage)
+	return fmt.Sprintf("%s%s %d/%s, %2.1f%%\x1b[0m", coverageColour(percentage), label, covered, pluralise(total, "line", "lines"), percentage)
 }
 
 // colouriseError adds a splash of colour to a compiler error message.
@@ -729,7 +729,7 @@ func colouriseError(err error) error {
 			if groups[4] != "" {
 				groups[4] += ": "
 			}
-			msg = append(msg, fmt.Sprintf("${BOLD_WHITE}%s, line %s%s:${RESET} ${BOLD_RED}%s${RESET}${BOLD_WHITE}%s${RESET}", groups[1], groups[2], groups[3], groups[4], groups[5]))
+			msg = append(msg, fmt.Sprintf("\x1b[37;1m%s, line %s%s:\x1b[0m \x1b[31;1m%s\x1b[0m\x1b[37;1m%s\x1b[0m", groups[1], groups[2], groups[3], groups[4], groups[5]))
 		} else {
 			msg = append(msg, line)
 		}

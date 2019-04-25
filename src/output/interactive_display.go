@@ -76,9 +76,9 @@ func printLines(state *core.BuildState, buildingTargets []buildingTarget, maxLin
 		printStat("I/O", state.Stats.CPU.IOWait, state.Stats.CPU.Count)
 		printStat("Mem use", state.Stats.Memory.UsedPercent, 1)
 		if state.Stats.NumWorkerProcesses > 0 {
-			printf("  ${BOLD_WHITE}Worker processes: %d${RESET}", state.Stats.NumWorkerProcesses)
+			printf("  \x1b[37;1mWorker processes: %d\x1b[0m", state.Stats.NumWorkerProcesses)
 		}
-		printf("${ERASE_AFTER}\n")
+		printf("\x1b[K\n")
 	}
 	for i := 0; i < len(buildingTargets) && i < maxLines; i++ {
 		buildingTargets[i].Lock()
@@ -96,44 +96,44 @@ func printLines(state *core.BuildState, buildingTargets []buildingTarget, maxLin
 				buildingTargets[i].LastProgress = target.Target.Progress
 			}
 			if target.Eta > 0 {
-				lprintf(cols, "${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%%%, est %s remaining)${ERASE_AFTER}\n",
+				lprintf(cols, "\x1b[37;1m=> [%4.1fs] \x1b[0m%s%s \x1b[37;1m%s\x1b[0m (%.1f%%%%, est %s remaining)\x1b[K\n",
 					duration, target.Colour, label, target.Description, target.Target.Progress, target.Eta)
 			} else {
-				lprintf(cols, "${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${RESET} (%.1f%%%% complete)${ERASE_AFTER}\n",
+				lprintf(cols, "\x1b[37;1m=> [%4.1fs] \x1b[0m%s%s \x1b[37;1m%s\x1b[0m (%.1f%%%% complete)\x1b[K\n",
 					duration, target.Colour, label, target.Description, target.Target.Progress)
 			}
 		} else if target.Active {
-			lprintf(cols, "${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_WHITE}%s${ERASE_AFTER}\n",
+			lprintf(cols, "\x1b[37;1m=> [%4.1fs] \x1b[0m%s%s \x1b[37;1m%s\x1b[K\n",
 				duration, target.Colour, label, target.Description)
 		} else if time.Since(target.Finished).Seconds() < 0.5 {
 			// Only display finished targets for half a second after they're done.
 			duration := target.Finished.Sub(target.Started).Seconds()
 			if target.Failed {
-				lprintf(cols, "${BOLD_RED}=> [%4.1fs] ${RESET}%s%s ${BOLD_RED}Failed${ERASE_AFTER}\n",
+				lprintf(cols, "\x1b[31;1m=> [%4.1fs] \x1b[0m%s%s \x1b[31;1mFailed\x1b[K\n",
 					duration, target.Colour, label)
 			} else if target.Cached {
-				lprintf(cols, "${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${BOLD_GREY}%s${ERASE_AFTER}\n",
+				lprintf(cols, "\x1b[37;1m=> [%4.1fs] \x1b[0m%s%s \x1b[30;1m%s\x1b[K\n",
 					duration, target.Colour, label, target.Description)
 			} else {
-				lprintf(cols, "${BOLD_WHITE}=> [%4.1fs] ${RESET}%s%s ${WHITE}%s${ERASE_AFTER}\n",
+				lprintf(cols, "\x1b[37;1m=> [%4.1fs] \x1b[0m%s%s \x1b[37m%s\x1b[K\n",
 					duration, target.Colour, label, target.Description)
 			}
 		} else {
-			printf("${BOLD_GREY}=|${ERASE_AFTER}\n")
+			printf("\x1b[30;1m=|\x1b[K\n")
 		}
 	}
-	printf("${RESET}")
+	printf("\x1b[0m")
 }
 
 // printStat prints a single statistic with appropriate colours.
 func printStat(caption string, stat float64, multiplier int) {
-	colour := "${BOLD_GREEN}"
+	colour := "\x1b[32;1m"
 	if stat > 80.0*float64(multiplier) {
-		colour = "${BOLD_RED}"
+		colour = "\x1b[31;1m"
 	} else if stat > 60.0*float64(multiplier) {
-		colour = "${BOLD_YELLOW}"
+		colour = "\x1b[33;1m"
 	}
-	printf("  ${BOLD_WHITE}%s:${RESET} %s%5.1f%%${RESET}", caption, colour, stat)
+	printf("  \x1b[37;1m%s:\x1b[0m %s%5.1f%%\x1b[0m", caption, colour, stat)
 }
 
 func recalcWindowSize(backend *cli.LogBackend) {

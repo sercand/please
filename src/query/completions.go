@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
+	"github.com/thought-machine/please/src/cli"
 	"github.com/thought-machine/please/src/core"
-	"github.com/thought-machine/please/src/utils"
+	"github.com/thought-machine/please/src/fs"
 )
 
 // CompletionLabels produces a set of labels that complete a given input.
@@ -56,6 +58,42 @@ func queryCompletionPackages(config *core.Configuration, query, repoRoot string)
 	os.Exit(0) // Don't need to run a full-blown parse, get out now.
 }
 
+// FindAllSubpackages finds all packages under a particular path.
+// Used to implement rules with ... where we need to know all possible packages
+// under that location.
+func findAllSubpackages(config *core.Configuration, rootPath string, prefix string) <-chan string {
+	ch := make(chan string)
+	go func() {
+		if rootPath == "" {
+			rootPath = "."
+		}
+		if err := fs.Walk(rootPath, func(name string, isDir bool) error {
+			basename := path.Base(name)
+			if basename == core.OutDir || (isDir && strings.HasPrefix(basename, ".") && name != ".") {
+				return filepath.SkipDir // Don't walk output or hidden directories
+			} else if isDir && !strings.HasPrefix(name, prefix) && !strings.HasPrefix(prefix, name) {
+				return filepath.SkipDir // Skip any directory without the prefix we're after (but not any directory beneath that)
+			} else if config.IsABuildFile(basename) && !isDir {
+				dir, _ := path.Split(name)
+				ch <- strings.TrimRight(dir, "/")
+			} else if cli.ContainsString(name, config.Parse.ExperimentalDir) {
+				return filepath.SkipDir // Skip the experimental directory if it's set
+			}
+			// Check against blacklist
+			for _, dir := range config.Parse.BlacklistDirs {
+				if dir == basename || strings.HasPrefix(name, dir) {
+					return filepath.SkipDir
+				}
+			}
+			return nil
+		}); err != nil {
+			log.Fatalf("Failed to walk tree under %s; %s\n", rootPath, err)
+		}
+		close(ch)
+	}()
+	return ch
+}
+
 // GetAllPackages returns a string slice of all the package labels, such as "//src/core/query"
 func GetAllPackages(config *core.Configuration, query, repoRoot string) []string {
 	root := path.Join(repoRoot, query)
@@ -64,7 +102,7 @@ func GetAllPackages(config *core.Configuration, query, repoRoot string) []string
 		root = path.Dir(root)
 	}
 	packages := []string{}
-	for pkg := range utils.FindAllSubpackages(config, root, origRoot) {
+	for pkg := range findAllSubpackages(config, root, origRoot) {
 		if strings.HasPrefix(pkg, origRoot) {
 			packages = append(packages, pkg[len(repoRoot):])
 		}

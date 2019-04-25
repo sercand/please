@@ -16,7 +16,6 @@ import (
 	"github.com/thought-machine/please/src/build"
 	"github.com/thought-machine/please/src/core"
 	"github.com/thought-machine/please/src/metrics"
-	"github.com/thought-machine/please/src/utils"
 	"github.com/thought-machine/please/src/worker"
 )
 
@@ -37,6 +36,14 @@ func Test(tid int, state *core.BuildState, label core.BuildLabel) {
 	target := state.Graph.TargetOrDie(label)
 	test(tid, state.ForTarget(target), label, target)
 	metrics.Record(target, time.Since(startTime))
+}
+
+// Max returns the larger of two ints.
+func max(x, y int) int {
+	if x < y {
+		return y
+	}
+	return x
 }
 
 func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.BuildTarget) {
@@ -202,7 +209,7 @@ func test(tid int, state *core.BuildState, label core.BuildLabel, target *core.B
 		flakeResults := core.TestSuite{}
 		// Run tests at least once, but possibly more if it's flaky.
 		// Flakiness will be `3` if `flaky` is `True` in the build_def.
-		numFlakes := utils.Max(target.Flakiness, 1)
+		numFlakes := max(target.Flakiness, 1)
 		for flakes := 1; flakes <= numFlakes; flakes++ {
 			var flakeStatus string
 			if numFlakes > 1 {
